@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Let AI Tech Cook</title>
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+    }
+
+    .container {
+        width: 80%;
+        max-width: 600px;
+        background: white;
+        padding: 20px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        margin: 20px auto;
+        box-sizing: border-box;
+    }
+
+    .animated-title {
+        animation: fadeIn 2s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    #preview {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    textarea, select, button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        box-sizing: border-box;
+    }
+
+    button {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #45a049;
+    }
+
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+    .loading-gif {
+        width: 200px;
+        height: 200px;
+    }
+
+    .recipe {
+        text-align: left;
+        max-width: 600px;
+        margin: 0 auto;
+        overflow-y: auto;
+        max-height: 80vh;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .recipe h2, .recipe h3 {
+        text-align: center;
+        color: #4CAF50;
+    }
+
+    .recipe ul, .recipe ol {
+        padding-left: 20px;
+    }
+
+    .recipe li {
+        margin-bottom: 10px;
+    }
+
+    .recipe ul li::marker {
+        color: #4CAF50;
+    }
+
+    .recipe ol li::marker {
+        color: #4CAF50;
+        font-weight: bold;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1 class="animated-title">Let iD Tech Cook</h1>
+    <form id="uploadForm">
+        <input type="file" id="imageInput" onchange="displayImage(this)">
+        <img id="preview" src="#" alt="Image Preview" style="display:none;">
+        <textarea id="specifications" placeholder="Specifications (Optional)"></textarea>
+        <select id="time" required>
+            <option value="">Select Time</option>
+            <option value="5-10min">5-10min</option>
+            <option value="10-20min">10-20min</option>
+            <option value="20-30min">20-30min</option>
+            <option value="30-60min">30-60min</option>
+            <option value="1-3h">1-3h</option>
+            <option value="any">Time doesn't matter</option>
+        </select>
+        <button type="submit">Cook</button>
+    </form>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('uploadForm');
+    form.addEventListener('submit', handleSubmit);
+});
+
+function showLoadingAnimation() {
+    const overlay = document.createElement('div');
+    overlay.className = 'loading-overlay';
+    overlay.innerHTML = '<img src="animation.gif" alt="Loading..." class="loading-gif">';
+    document.body.appendChild(overlay);
+}
+
+function hideLoadingAnimation() {
+    const overlay = document.querySelector('.loading-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+async function handleSubmit(event) {
+    event.preventDefault();
+
+    const imageInput = document.getElementById('imageInput');
+    const specifications = document.getElementById('specifications').value;
+    const time = document.getElementById('time').value;
+
+    if (!imageInput.files || imageInput.files.length === 0) {
+        alert('Please select an image of your avalible food.');
+        return;
+    }
+
+    showLoadingAnimation();
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        const base64Image = e.target.result;
+
+        const prompt = `Is this a food-related image? If not, respond with 'No food detected'. If it is, suggest 3 recipe options that take ${time} to prepare. 
+                        Additional specifications: ${specifications}
+                        If food is detected, provide the options in the following format:
+                        1. [Recipe Name 1]
+                        2. [Recipe Name 2]
+                        3. [Recipe Name 3]`;
+
+        try {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer sk-proj-DBzLw0RJ45GWDBMwin8tT3BlbkFJo2OTcDB9Yz9qWgIynsbe'
+                },
+                body: JSON.stringify({
+                    model: "gpt-4o",
+                    messages: [
+                        {
+                            role: "user",
+                            content: [
+                                { type: "text", text: prompt },
+                                {
+                                    type: "image_url",
+                                    image_url: {
+                                        url: base64Image,
+                                    },
+                                },
+                            ],
+                        }
+                    ],
+                    max_tokens: 300
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`API request failed: ${errorData.error.message}`);
+            }
+
+            const result = await response.json();
+            const content = result.choices[0].message.content;
+            hideLoadingAnimation();
+
+            if (content.toLowerCase().includes("no food detected")) {
+                displayNoFoodDetected();
+            } else {
+                const options = parseOptions(content);
+                displayOptions(options, base64Image, specifications, time);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            hideLoadingAnimation();
+            displayError(`An error occurred: ${error.message}`);
+        }
+    };
+
+    reader.readAsDataURL(imageInput.files[0]);
+}
+
+function parseOptions(content) {
+    const lines = content.split('\n');
+    const options = lines.filter(line => line.trim().match(/^\d+\./)).map(line => line.replace(/^\d+\./, '').trim());
+    return options.slice(0, 3); // Ensure we have at most 3 options
+}
+
+function displayNoFoodDetected() {
+    const container = document.querySelector('.container');
+    container.innerHTML = `
+        <h2>No Food Detected</h2>
+        <p>We couldn't detect any food in the uploaded image. Please try again with a food-related image.</p>
+        <button onclick="location.reload()">Try Again</button>
+    `;
+}
+
+function displayOptions(options, base64Image, specifications, time) {
+    const container = document.querySelector('.container');
+    
+    // Ensure we have exactly 3 options
+    while (options.length < 3) {
+        options.push("Random Recipe Option");
+    }
+    options = options.slice(0, 3);
+
+    container.innerHTML = `
+        <h2>Choose a Recipe</h2>
+        <ul>
+            ${options.map((option, index) => `
+                <li>
+                    <button onclick="generateFullRecipe('${option}', '${base64Image}', '${specifications}', '${time}')">${option}</button>
+                </li>
+            `).join('')}
+        </ul>
+    `;
+}
+
+async function generateFullRecipe(selectedOption, base64Image, specifications, time) {
+    showLoadingAnimation();
+
+    const prompt = `Generate a full recipe for ${selectedOption} that takes ${time} to prepare. 
+                    Additional specifications: ${specifications}
+                    Please format the recipe as follows:
+                    1. Start with the recipe title in bold (use **).
+                    2. Follow with "**Ingredients:**" on a new line.
+                    3. List each ingredient on a new line, starting with a dash (-).
+                    4. End with "**Instructions:**" on a new line.
+                    5. List each instruction step on a new line, starting with a number and a period (1., 2., etc.).
+                    Do not use any other formatting or additional text.`;
+
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer sk-proj-DBzLw0RJ45GWDBMwin8tT3BlbkFJo2OTcDB9Yz9qWgIynsbe'
+            },
+            body: JSON.stringify({
+                model: "gpt-4o",
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: prompt },
+                            {
+                                type: "image_url",
+                                image_url: {
+                                    url: base64Image,
+                                },
+                            },
+                        ],
+                    }
+                ],
+                max_tokens: 500
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(`API request failed: ${errorData.error.message}`);
+        }
+
+        const result = await response.json();
+        hideLoadingAnimation();
+        displayRecipe(result.choices[0].message.content);
+    } catch (error) {
+        console.error('Error:', error);
+        hideLoadingAnimation();
+        displayError(`An error occurred: ${error.message}`);
+    }
+}
+
+function displayRecipe(recipeContent) {
+    const container = document.querySelector('.container');
+    
+    // Split the content into title, ingredients, and instructions
+    const parts = recipeContent.split('**Instructions:**');
+    const [titleAndIngredients, instructions] = parts;
+    const [title, ingredients] = titleAndIngredients.split('**Ingredients:**');
+
+    // Format the content
+    const formattedContent = `
+        <div class="recipe">
+            <h2>${title.trim().replace(/\*\*/g, '')}</h2>
+            <h3>Ingredients:</h3>
+            <ul>
+                ${ingredients.split('-').slice(1).map(ingredient => `<li>${ingredient.trim()}</li>`).join('')}
+            </ul>
+            <h3>Instructions:</h3>
+            <ol>
+                ${instructions.split(/\d+\./).slice(1).map(step => `<li>${step.trim()}</li>`).join('')}
+            </ol>
+            <button onclick="location.reload()">Cook Another Dish</button>
+        </div>
+    `;
+
+    container.innerHTML = formattedContent;
+}
+
+function displayError(message) {
+    const container = document.querySelector('.container');
+    container.innerHTML = `
+        <h2>Error</h2>
+        <p>${message}</p>
+        <button onclick="location.reload()">Try Again</button>
+    `;
+}
+
+function displayImage(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        
+        reader.onload = function (e) {
+            var imgElement = document.getElementById('preview');
+            imgElement.style.display = 'block';
+            imgElement.src = e.target.result;
+        };
+        
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+</body>
+</html>
