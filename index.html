@@ -153,7 +153,67 @@ async function handleSubmit(event) {
     const time = document.getElementById('time').value;
 
     if (!imageInput.files || imageInput.files.length === 0) {
-        alert('Please select an image of your avalible food.');
+        alert('Please select an image of your availible food. The supported file types and PNG and JPG (JPEG)');
+        return;
+    }
+    //Must not do this async because ideally we should ensure it is a genuine PNG first before moving on
+    const tmp = new FileReader();
+    tmp.readAsArrayBuffer(imageInput.files[0]);
+    tmp.onload = (event) => {
+        const arrayBuffer = event.target.result;
+        const dataView = new Uint8Array(arrayBuffer, 0, 12);
+        let isPNG = false;
+        let isJPG = false;
+        //Godawful coding incoming. Tell me your idiomatic javascript replacement code later.
+        if (dataView[0] === 137 &&
+            dataView[1] === 80 &&
+            dataView[2] === 78 &&
+            dataView[3] === 71 &&
+            dataView[4] === 13 &&
+            dataView[5] === 10 &&
+            dataView[6] === 26 &&
+            dataView[7] === 10) {
+            isPNG = true;
+        }
+        if (dataView[0] === 255 &&
+            dataView[1] === 216 &&
+            dataView[2] === 255 &&
+            dataView[3] === 219) {
+            isJPG = true;
+        }
+        if (dataView[0] === 255 &&
+            dataView[1] === 216 &&
+            dataView[2] === 255 &&
+            dataView[3] === 224 &&
+            dataView[4] === 0 &&
+            dataView[5] === 16 &&
+            dataView[6] === 74 &&
+            dataView[7] === 70 &&
+            dataView[8] === 73 &&
+            dataView[9] === 70 &&
+            dataView[10] === 0 &&
+            dataView[11] === 1) {
+            isJPG = true;
+        }
+        if (dataView[0] === 255 &&
+            dataView[1] === 216 &&
+            dataView[2] === 255 &&
+            dataView[3] === 238) {
+            isJPG = true;
+        }
+        if (dataView[0] === 255 &&
+            dataView[1] === 216 &&
+            dataView[2] === 255 &&
+            dataView[3] === 224) {
+            isJPG = true;
+        }
+        if (!isPNG && !isJPG) {
+            alert('Please select an image of your availible food. The supported file types and PNG and JPG (JPEG)');
+            window.location.reload();
+        }
+    }
+    tmp.onerror = (error) => {
+        console.log("Error");
         return;
     }
 
