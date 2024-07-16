@@ -208,8 +208,8 @@ async function handleSubmit(event) {
             isJPG = true;
         }
         if (!isPNG && !isJPG) {
-            alert('Please select an image of your availible food. The supported file types and PNG and JPG (JPEG)');
             window.location.reload();
+            return;
         }
     }
     tmp.onerror = (error) => {
