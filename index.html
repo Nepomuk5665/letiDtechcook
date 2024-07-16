@@ -153,10 +153,13 @@ async function handleSubmit(event) {
     const time = document.getElementById('time').value;
 
     if (!imageInput.files || imageInput.files.length === 0) {
-        alert('Please select an image of your available food. The supported file types are PNG and JPG (JPEG)');
+
+    
+
+        alert('Please select an image of your availible food. The supported file types and PNG and JPG (JPEG)');
         return;
     }
-    
+
     const tmp = new FileReader();
     tmp.readAsArrayBuffer(imageInput.files[0]);
     tmp.onload = (event) => {
@@ -164,7 +167,7 @@ async function handleSubmit(event) {
         const dataView = new Uint8Array(arrayBuffer, 0, 12);
         let isPNG = false;
         let isJPG = false;
-        
+    
         if (dataView[0] === 137 &&
             dataView[1] === 80 &&
             dataView[2] === 78 &&
@@ -208,8 +211,11 @@ async function handleSubmit(event) {
             isJPG = true;
         }
         if (!isPNG && !isJPG) {
-            alert('Please select an image of your available food. The supported file types are PNG and JPG (JPEG)');
+
+
             window.location.reload();
+            return;
+
         }
     }
     tmp.onerror = (error) => {
