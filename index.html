@@ -153,7 +153,6 @@ async function handleSubmit(event) {
     const time = document.getElementById('time').value;
 
     if (!imageInput.files || imageInput.files.length === 0) {
-<<<<<<< HEAD
         alert('Please select an image of your availible food. The supported file types and PNG and JPG (JPEG)');
         return;
     }
@@ -215,9 +214,7 @@ async function handleSubmit(event) {
     }
     tmp.onerror = (error) => {
         console.log("Error");
-=======
         alert('Please select an image of your available food.');
->>>>>>> bb081400c6412fdbbef2190d918234d7f1a4847c
         return;
     }
 
