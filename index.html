@@ -153,6 +153,67 @@ async function handleSubmit(event) {
     const time = document.getElementById('time').value;
 
     if (!imageInput.files || imageInput.files.length === 0) {
+        alert('Please select an image of your available food. The supported file types are PNG and JPG (JPEG)');
+        return;
+    }
+    
+    const tmp = new FileReader();
+    tmp.readAsArrayBuffer(imageInput.files[0]);
+    tmp.onload = (event) => {
+        const arrayBuffer = event.target.result;
+        const dataView = new Uint8Array(arrayBuffer, 0, 12);
+        let isPNG = false;
+        let isJPG = false;
+        
+        if (dataView[0] === 137 &&
+            dataView[1] === 80 &&
+            dataView[2] === 78 &&
+            dataView[3] === 71 &&
+            dataView[4] === 13 &&
+            dataView[5] === 10 &&
+            dataView[6] === 26 &&
+            dataView[7] === 10) {
+            isPNG = true;
+        }
+        if (dataView[0] === 255 &&
+            dataView[1] === 216 &&
+            dataView[2] === 255 &&
+            dataView[3] === 219) {
+            isJPG = true;
+        }
+        if (dataView[0] === 255 &&
+            dataView[1] === 216 &&
+            dataView[2] === 255 &&
+            dataView[3] === 224 &&
+            dataView[4] === 0 &&
+            dataView[5] === 16 &&
+            dataView[6] === 74 &&
+            dataView[7] === 70 &&
+            dataView[8] === 73 &&
+            dataView[9] === 70 &&
+            dataView[10] === 0 &&
+            dataView[11] === 1) {
+            isJPG = true;
+        }
+        if (dataView[0] === 255 &&
+            dataView[1] === 216 &&
+            dataView[2] === 255 &&
+            dataView[3] === 238) {
+            isJPG = true;
+        }
+        if (dataView[0] === 255 &&
+            dataView[1] === 216 &&
+            dataView[2] === 255 &&
+            dataView[3] === 224) {
+            isJPG = true;
+        }
+        if (!isPNG && !isJPG) {
+            alert('Please select an image of your available food. The supported file types are PNG and JPG (JPEG)');
+            window.location.reload();
+        }
+    }
+    tmp.onerror = (error) => {
+        console.log("Error");
         alert('Please select an image of your available food.');
         return;
     }
@@ -162,6 +223,9 @@ async function handleSubmit(event) {
     const reader = new FileReader();
     reader.onload = async function(e) {
         const base64Image = e.target.result;
+
+        // Downgrade image quality
+        const downgradedImage = await downgradeImage(base64Image, 0.3); // 30% quality
 
         const prompt = `Is this a food-related image? If not, respond with 'No food detected'. If it is, suggest 3 recipe options that take ${time} to prepare. 
                         Additional specifications: ${specifications}
@@ -178,7 +242,7 @@ async function handleSubmit(event) {
                 },
                 body: JSON.stringify({
                     prompt: prompt,
-                    image: base64Image,
+                    image: downgradedImage,
                     time: time,
                     specifications: specifications
                 })
@@ -189,11 +253,10 @@ async function handleSubmit(event) {
             }
 
             const result = await response.json();
-            console.log('API Response:', result);  // Log the entire response
+            console.log('API Response:', result);
 
             hideLoadingAnimation();
 
-            // Extract content from the response
             const content = result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content;
 
             if (content) {
@@ -201,7 +264,7 @@ async function handleSubmit(event) {
                     displayNoFoodDetected();
                 } else {
                     const options = parseOptions(content);
-                    displayOptions(options, base64Image, specifications, time);
+                    displayOptions(options, downgradedImage, specifications, time);
                 }
             } else {
                 throw new Error('Unexpected response structure from API');
@@ -214,6 +277,32 @@ async function handleSubmit(event) {
     };
 
     reader.readAsDataURL(imageInput.files[0]);
+}
+
+function downgradeImage(base64Image, quality) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Calculate new dimensions (30% of original)
+            const newWidth = img.width * 0.3;
+            const newHeight = img.height * 0.3;
+
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+
+            // Draw image at new size
+            ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+            // Convert to base64 with reduced quality
+            const downgradedImage = canvas.toDataURL('image/jpeg', quality);
+            resolve(downgradedImage);
+        };
+        img.onerror = reject;
+        img.src = base64Image;
+    });
 }
 
 function parseOptions(content) {
@@ -284,11 +373,10 @@ async function generateFullRecipe(selectedOption, base64Image, specifications, t
         }
 
         const result = await response.json();
-        console.log('API Response for full recipe:', result);  // Log the entire response
+        console.log('API Response for full recipe:', result);
 
         hideLoadingAnimation();
 
-        // Extract content from the response
         const content = result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content;
 
         if (content) {
@@ -306,12 +394,10 @@ async function generateFullRecipe(selectedOption, base64Image, specifications, t
 function displayRecipe(recipeContent) {
     const container = document.querySelector('.container');
     
-    // Split the content into title, ingredients, and instructions
     const parts = recipeContent.split('**Instructions:**');
     const [titleAndIngredients, instructions] = parts;
     const [title, ingredients] = titleAndIngredients.split('**Ingredients:**');
 
-    // Format the content
     const formattedContent = `
         <div class="recipe">
             <h2>${title.trim().replace(/\*\*/g, '')}</h2>
