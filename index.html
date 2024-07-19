@@ -157,7 +157,8 @@ async function handleSubmit(event) {
         return;
     }
     
-    const tmp = new FileReader();
+    //file type checking for signatures. bro doesn't like this so it's removed but it actually works 100%, trust. It's true, I tested it. it's good and goated.
+    /*const tmp = new FileReader();
     tmp.readAsArrayBuffer(imageInput.files[0]);
     tmp.onload = (event) => {
         const arrayBuffer = event.target.result;
@@ -216,7 +217,7 @@ async function handleSubmit(event) {
         console.log("Error");
         alert('Please select an image of your available food.');
         return;
-    }
+    }*/
 
     showLoadingAnimation();
 
