@@ -1,0 +1,33 @@
+{
+  "name": "glitch-hello-node",
+  "version": "0.1.0",
+  "description": "A Node app with Express and OpenAI API integration, built on Glitch.com.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@fastify/formbody": "^7.4.0",
+    "@fastify/static": "^7.0.4",
+    "@fastify/view": "^9.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "fastify": "^4.28.1",
+    "handlebars": "^4.7.8",
+    "node-fetch": "^3.3.1"
+  },
+  "engines": {
+    "node": "14.x"
+  },
+  "repository": {
+    "url": "https://glitch.com/edit/#!/glitch-hello-node"
+  },
+  "license": "MIT",
+  "keywords": [
+    "node",
+    "glitch",
+    "express",
+    "openai"
+  ]
+}

@@ -108,7 +108,7 @@
 </head>
 <body>
 <div class="container">
-    <h1 class="animated-title">Let iD Tech Cook</h1>
+    <h1 class="animated-title">Let AI Tech Cook</h1>
     <form id="uploadForm">
         <input type="file" id="imageInput" onchange="displayImage(this)">
         <img id="preview" src="#" alt="Image Preview" style="display:none;">
@@ -153,13 +153,10 @@ async function handleSubmit(event) {
     const time = document.getElementById('time').value;
 
     if (!imageInput.files || imageInput.files.length === 0) {
-
-    
-
-        alert('Please select an image of your availible food. The supported file types and PNG and JPG (JPEG)');
+        alert('Please select an image of your available food. The supported file types are PNG and JPG (JPEG)');
         return;
     }
-
+    
     const tmp = new FileReader();
     tmp.readAsArrayBuffer(imageInput.files[0]);
     tmp.onload = (event) => {
@@ -167,7 +164,7 @@ async function handleSubmit(event) {
         const dataView = new Uint8Array(arrayBuffer, 0, 12);
         let isPNG = false;
         let isJPG = false;
-    
+        
         if (dataView[0] === 137 &&
             dataView[1] === 80 &&
             dataView[2] === 78 &&
@@ -211,11 +208,8 @@ async function handleSubmit(event) {
             isJPG = true;
         }
         if (!isPNG && !isJPG) {
-
-
+            alert('Please select an image of your available food. The supported file types are PNG and JPG (JPEG)');
             window.location.reload();
-            return;
-
         }
     }
     tmp.onerror = (error) => {
@@ -384,9 +378,10 @@ async function generateFullRecipe(selectedOption, base64Image, specifications, t
         hideLoadingAnimation();
 
         const content = result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content;
+        const youtubeLink = result.youtubeLink;
 
         if (content) {
-            displayRecipe(content);
+            displayRecipe(content, youtubeLink);
         } else {
             throw new Error('Unexpected response structure from API');
         }
@@ -397,7 +392,7 @@ async function generateFullRecipe(selectedOption, base64Image, specifications, t
     }
 }
 
-function displayRecipe(recipeContent) {
+function displayRecipe(recipeContent, youtubeLink) {
     const container = document.querySelector('.container');
     
     const parts = recipeContent.split('**Instructions:**');
@@ -415,6 +410,10 @@ function displayRecipe(recipeContent) {
             <ol>
                 ${instructions.split(/\d+\./).slice(1).map(step => `<li>${step.trim()}</li>`).join('')}
             </ol>
+            ${youtubeLink ? `
+                <h3>Video Tutorial:</h3>
+                <p><a href="${youtubeLink}" target="_blank">Watch how to cook this recipe on YouTube</a></p>
+            ` : ''}
             <button onclick="location.reload()">Cook Another Dish</button>
         </div>
     `;
