@@ -20,7 +20,7 @@
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/let-id-tech-cook.git
+    git clone https://github.com/Nepomuk5665/letiDtechcook.git
     ```
 2. Open `index.html` in your web browser.
 
